@@ -1165,7 +1165,17 @@ function QuestieCompat._readByte(self)
 
     self._pointer = self._pointer + 1
 
-	return self._bin[subIndex][index]
+	local chunk = self._bin[subIndex]
+	if type(chunk) == "table" then
+		return chunk[index]
+	end
+	-- QuestieStreamLib:Load() fills _bin as a FLAT array of byte numbers
+	-- (the network deserialize path), not the chunked table layout the write
+	-- path builds. Indexing a number crashed every incoming comms decode
+	-- (Deserialize -> "attempt to index field '?' (a number value)"), and the
+	-- pcall in OnCommReceived swallowed it, so party quest-progress sync
+	-- silently never worked. Fall through to the flat layout.
+	return self._bin[self._pointer - 1]
 end
 
 function QuestieCompat.Save(self)
